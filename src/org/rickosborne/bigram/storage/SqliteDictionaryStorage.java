@@ -14,9 +14,13 @@ public class SqliteDictionaryStorage extends SqliteStorage implements IDictionar
                 "seen INTEGER, " +
                 "PRIMARY KEY (word)" +
                 ");";
+        lookupSQL = "" +
+                "SELECT ROWID " +
+                "FROM " + tableName + " " +
+                "WHERE (word = ?);";
         insertSQL = "" +
-                "INSERT OR IGNORE INTO " + tableName + " (word, seen) " +
-                "VALUES (?, 0);";
+                "INSERT INTO " + tableName + " (word, seen) " +
+                "VALUES (?, 1);";
         updateSQL = "" +
                 "UPDATE " + tableName + " " +
                 "SET seen = seen + 1 " +
@@ -27,32 +31,29 @@ public class SqliteDictionaryStorage extends SqliteStorage implements IDictionar
                 "WHERE (SUBSTR(word, 1, ?) = ?);";
     }
 
-    public SqliteDictionaryStorage(String dbFile) {
+    public SqliteDictionaryStorage(String dbFile) throws SQLException, ClassNotFoundException {
         super(dbFile);
     }
 
     @Override
-    public void add(String word) {
-        try {
+    public void add(String word) throws SQLException {
+        lookupStatement.setString(1, word);
+        ResultSet existing = lookupStatement.executeQuery();
+        if (existing.next()) {
+            updateStatement.setInt(1, existing.getInt(1));
+            updateStatement.executeUpdate();
+        }
+        else {
             insertStatement.setString(1, word);
             insertStatement.executeUpdate();
-            updateStatement.setString(1, word);
-            updateStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Override
-    public Prediction get(String partial) {
+    public Prediction get(String partial) throws SQLException {
         if ((partial == null) || (partial.length() == 0)) return null;
-        try {
-            selectStatement.setInt(1, partial.length());
-            selectStatement.setString(2, partial);
-            return predictionFromQuery(selectStatement);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
+        selectStatement.setInt(1, partial.length());
+        selectStatement.setString(2, partial);
+        return predictionFromQuery(selectStatement);
     }
 }

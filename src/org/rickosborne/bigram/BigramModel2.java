@@ -11,6 +11,7 @@ import org.rickosborne.bigram.util.WordList;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.sql.SQLException;
 
 public class BigramModel2 {
 
@@ -19,7 +20,7 @@ public class BigramModel2 {
     private WordPredictor[] predictors;
     private OutputStreamWriter logger = null;
 
-    public BigramModel2(Config config) {
+    public BigramModel2(Config config) throws SQLException, ClassNotFoundException {
         predictors = new WordPredictor[3];
         IDictionaryStorage dictionaryStorage;
         IBigramStorage bigramStorage;
@@ -31,10 +32,9 @@ public class BigramModel2 {
                 trigramStorage = new MemoryTrigramStorage();
                 break;
             default:
-                String dbFile = config.get("sqliteFile", "words.sqlite");
-                dictionaryStorage = new SqliteDictionaryStorage(dbFile);
-                bigramStorage = new SqliteBigramStorage(dbFile);
-                trigramStorage = new SqliteTrigramStorage(dbFile);
+                dictionaryStorage = new SqliteDictionaryStorage(config.get("dictionarySqliteFile", "words-dict.sqlite"));
+                bigramStorage = new SqliteBigramStorage(config.get("bigramSqliteFile", "words-bi.sqlite"));
+                trigramStorage = new SqliteTrigramStorage(config.get("trigramSqliteFile", "words-tri.sqlite"));
         }
         predictors[0] = new DictionaryPredictor(dictionaryStorage);
         predictors[1] = new BigramPredictor(bigramStorage);
@@ -49,28 +49,24 @@ public class BigramModel2 {
         public Prediction predict() { return this.predict(null); }
     }
 
-    private void log(String message) {
-        try {
-            this.logger.write(message);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void log(String message) throws IOException {
+        this.logger.write(message);
     }
 
-    public void setLogger(OutputStreamWriter logger) {
+    public void setLogger(OutputStreamWriter logger) throws IOException {
         this.logger = logger;
         for (String name : names) {
             log(name + " Guess\t" + name + " Correct?\t" + name + " Seen\t" + name + " Size\t" + name + " Vote\t");
         }
     }
 
-    public void learn(String[] words) {
+    public void learn(String[] words) throws SQLException {
         for (WordPredictor predictor : predictors) {
             predictor.learn(words);
         }
     }
 
-    public String predict(String[] words, String partial, String answer) {
+    public String predict(String[] words, String partial, String answer) throws IOException, SQLException {
         WeightedWordList guesses = new WeightedWordList();
         for (int i = 0, predictorCount = predictors.length; i < predictorCount; i++) {
             Prediction guess = predictors[i].predict(words, partial);

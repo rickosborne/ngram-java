@@ -3,6 +3,7 @@ package org.rickosborne.bigram.predictor;
 import org.rickosborne.bigram.storage.ITrigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 
+import java.sql.SQLException;
 import java.util.HashMap;
 
 public class TrigramPredictor implements WordPredictor {
@@ -14,25 +15,15 @@ public class TrigramPredictor implements WordPredictor {
     }
 
     @Override
-    public void learn(String[] words) {
-        String first = null, second = null;
-        for (String third : words) {
-            if (second == null) {
-                second = third;
-                continue;
-            }
-            if (first == null) {
-                first = second;
-                continue;
-            }
-            store.add(first, second, third);
-            first = second;
-            second = third;
+    public void learn(String[] words) throws SQLException {
+        if (words.length < 3) return;
+        for (int i = 2, l = words.length; i < l; i++) {
+            store.add(words[i-2], words[i-1], words[i]);
         }
     }
 
     @Override
-    public Prediction predict(String[] words, String partial) {
+    public Prediction predict(String[] words, String partial) throws SQLException {
         if (words.length < 2) return null;
         String first = words[words.length - 2], second = words[words.length - 1];
         return store.get(first, second, partial);

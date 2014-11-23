@@ -4,6 +4,7 @@ import org.rickosborne.bigram.storage.IBigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 import org.rickosborne.bigram.util.WordList;
 
+import java.sql.SQLException;
 import java.util.HashMap;
 
 public class BigramPredictor implements WordPredictor {
@@ -15,20 +16,15 @@ public class BigramPredictor implements WordPredictor {
     }
 
     @Override
-    public void learn(String[] words) {
-        String first = null;
-        for (String second : words) {
-            if (first == null) {
-                first = second;
-                continue;
-            }
-            store.add(first, second);
-            first = second;
+    public void learn(String[] words) throws SQLException {
+        if (words.length < 2) return;
+        for (int i = 1, l = words.length; i < l; i++) {
+            store.add(words[i-1], words[i]);
         }
     }
 
     @Override
-    public Prediction predict(String[] words, String partial) {
+    public Prediction predict(String[] words, String partial) throws SQLException {
         if (words.length < 1) return null;
         String first = words[words.length - 1];
         return store.get(first, partial);

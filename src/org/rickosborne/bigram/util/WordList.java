@@ -1,7 +1,5 @@
 package org.rickosborne.bigram.util;
 
-import org.rickosborne.bigram.util.Prediction;
-
 import java.util.HashMap;
 import java.util.Map;
 

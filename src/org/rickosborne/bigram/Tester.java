@@ -6,6 +6,7 @@ import org.rickosborne.bigram.util.TestResult;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -49,7 +50,7 @@ public class Tester {
         return sb.toString();
     }
 
-    public Tester(BigramModel2 model, TestResult result, OutputStream log) {
+    public Tester(BigramModel2 model, TestResult result, OutputStream log) throws IOException {
         this.model = model;
         this.result = result;
         this.logger = new OutputStreamWriter(log);
@@ -80,7 +81,7 @@ public class Tester {
         return words.toArray(new String[words.size()]);
     }
 
-    public void train (LineReader.TrainTestIterator iterator) {
+    public void train (LineReader.TrainTestIterator iterator) throws SQLException {
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
         result.memoryBefore = runtime.totalMemory() - runtime.freeMemory();
@@ -92,7 +93,7 @@ public class Tester {
         }
     }
 
-    public void test (LineReader.TrainTestIterator iterator) {
+    public void test (LineReader.TrainTestIterator iterator) throws IOException, SQLException {
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
         result.memoryAfter = runtime.totalMemory() - runtime.freeMemory();

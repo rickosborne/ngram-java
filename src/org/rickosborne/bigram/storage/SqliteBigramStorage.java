@@ -17,10 +17,14 @@ public class SqliteBigramStorage extends SqliteStorage implements IBigramStorage
                 "word2 STRING, " +
                 "seen INTEGER, " +
                 "PRIMARY KEY (word1, word2)" +
-                ") WITHOUT ROWID;";
+                ");";
+        lookupSQL = "" +
+                "SELECT ROWID " +
+                "FROM " + tableName + " " +
+                "WHERE (word1 = ?) AND (word2 = ?);";
         insertSQL = "" +
-                "INSERT OR IGNORE INTO " + tableName + " (word1, word2, seen) " +
-                "VALUES (?, ?, 0);";
+                "INSERT INTO " + tableName + " (word1, word2, seen) " +
+                "VALUES (?, ?, 1);";
         updateSQL = "" +
                 "UPDATE " + tableName + " " +
                 "SET seen = seen + 1 " +
@@ -35,45 +39,38 @@ public class SqliteBigramStorage extends SqliteStorage implements IBigramStorage
                 "WHERE (word1 = ?) AND (SUBSTR(word2, 1, ?) = ?);";
     }
 
-    public SqliteBigramStorage(String dbFile) {
+    public SqliteBigramStorage(String dbFile) throws SQLException, ClassNotFoundException {
         super(dbFile);
-        try {
-            selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
     }
 
     @Override
-    public void add(String firstWord, String secondWord) {
-        try {
+    public void add(String firstWord, String secondWord) throws SQLException {
+        lookupStatement.setString(1, firstWord);
+        lookupStatement.setString(2, secondWord);
+        ResultSet existing = lookupStatement.executeQuery();
+        if (existing.next()) {
+            updateStatement.setInt(1, existing.getInt(1));
+            updateStatement.executeUpdate();
+        }
+        else {
             insertStatement.setString(1, firstWord);
             insertStatement.setString(2, secondWord);
             insertStatement.executeUpdate();
-            updateStatement.setString(1, firstWord);
-            updateStatement.setString(2, secondWord);
-            updateStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
     }
 
     @Override
-    public Prediction get(String firstWord, String partial) {
-        try {
-            PreparedStatement select;
-            if ((partial == null) || (partial.length() == 0)) {
-                select = selectStatement;
-            } else {
-                select = selectWithPartialStatement;
-                select.setInt(2, partial.length());
-                select.setString(3, partial);
-            }
-            select.setString(1, firstWord);
-            return predictionFromQuery(select);
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public Prediction get(String firstWord, String partial) throws SQLException {
+        PreparedStatement select;
+        if ((partial == null) || (partial.length() == 0)) {
+            select = selectStatement;
+        } else {
+            select = selectWithPartialStatement;
+            select.setInt(2, partial.length());
+            select.setString(3, partial);
         }
-        return null;
+        select.setString(1, firstWord);
+        return predictionFromQuery(select);
     }
 }

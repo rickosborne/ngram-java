@@ -6,15 +6,13 @@ import org.rickosborne.bigram.util.Config;
 import org.rickosborne.bigram.util.LineReader;
 import org.rickosborne.bigram.util.TestResult;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException {
         Config config = new Config("config.properties");
         InputStream in = System.in;
         int maxTrainLines = config.get("maxTrainLines", 10000),
@@ -22,22 +20,14 @@ public class Main {
         String inputFile = config.get("inputFile", null),
                 logFile = config.get("logFile", "log.txt");
         if (inputFile != null) {
-            try {
-                in = new FileInputStream(inputFile);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
+            in = new FileInputStream(inputFile);
         }
         BigramModel2 model = new BigramModel2(config);
         LineReader.TrainTestIterator iterator = new LineReader.TrainTestIterator(in, maxTrainLines, maxTestLines);
         TestResult result = new TestResult();
-        try {
-            Tester tester = new Tester(model, result, new FileOutputStream(logFile));
-            tester.train(iterator);
-            tester.test(iterator);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        Tester tester = new Tester(model, result, new FileOutputStream(logFile));
+        tester.train(iterator);
+        tester.test(iterator);
         DecimalFormat format = new DecimalFormat("#,###");
         System.out.printf(
             "\n" +
