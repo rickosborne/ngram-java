@@ -31,8 +31,6 @@ public class BigramPredictor implements WordPredictor {
     public Prediction predict(String[] words, String partial) {
         if (words.length < 1) return null;
         String first = words[words.length - 1];
-        WordList known = store.get(first);
-        if (known == null) return null;
-        return known.predict(partial);
+        return store.get(first, partial);
     }
 }

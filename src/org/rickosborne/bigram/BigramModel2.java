@@ -14,6 +14,11 @@ import java.io.OutputStreamWriter;
 
 public class BigramModel2 {
 
+    private String[] names = { "dictionary", "bigram", "trigram" };
+    private double[] weights;
+    private WordPredictor[] predictors;
+    private OutputStreamWriter logger = null;
+
     public BigramModel2(Config config) {
         predictors = new WordPredictor[3];
         IDictionaryStorage dictionaryStorage;
@@ -34,16 +39,15 @@ public class BigramModel2 {
         predictors[0] = new DictionaryPredictor(dictionaryStorage);
         predictors[1] = new BigramPredictor(bigramStorage);
         predictors[2] = new TrigramPredictor(trigramStorage);
+        weights = new double[3];
+        weights[0] = config.get("dictionaryWeight", 200);
+        weights[1] = config.get("bigramWeight", 220);
+        weights[2] = config.get("trigramWeight", 240);
     }
 
     private class WeightedWordList extends WordList {
         public Prediction predict() { return this.predict(null); }
     }
-
-    private String[] names = { "dictionary", "bigram", "trigram" };
-    private double[] weights = { 240, 200, 200 };
-    private WordPredictor[] predictors;
-    private OutputStreamWriter logger = null;
 
     private void log(String message) {
         try {
