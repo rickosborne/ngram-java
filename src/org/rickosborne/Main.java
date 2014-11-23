@@ -1,8 +1,8 @@
 package org.rickosborne;
 
-import org.rickosborne.bigram.BigramModel;
 import org.rickosborne.bigram.BigramModel2;
 import org.rickosborne.bigram.Tester;
+import org.rickosborne.bigram.util.Config;
 import org.rickosborne.bigram.util.LineReader;
 import org.rickosborne.bigram.util.TestResult;
 
@@ -15,28 +15,24 @@ import java.text.DecimalFormat;
 public class Main {
 
     public static void main(String[] args) {
+        Config config = new Config("config.properties");
         InputStream in = System.in;
-        int maxTrainLines = 10000, maxTestLines = 100;
-        if (args.length > 0) {
+        int maxTrainLines = config.get("maxTrainLines", 10000),
+                maxTestLines = config.get("maxTestLines", 100);
+        String inputFile = config.get("inputFile", null),
+                logFile = config.get("logFile", "log.txt");
+        if (inputFile != null) {
             try {
-                in = new FileInputStream(args[0]);
+                in = new FileInputStream(inputFile);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
-            if (args.length > 1) {
-                maxTrainLines = Integer.parseInt(args[1], 10);
-                if (args.length > 2) {
-                    maxTestLines = Integer.parseInt(args[2], 10);
-                }
-            }
         }
-        BigramModel2 model = new BigramModel2();
+        BigramModel2 model = new BigramModel2(config);
         LineReader.TrainTestIterator iterator = new LineReader.TrainTestIterator(in, maxTrainLines, maxTestLines);
         TestResult result = new TestResult();
-        FileOutputStream logFile;
         try {
-            logFile = new FileOutputStream("log.txt");
-            Tester tester = new Tester(model, result, logFile);
+            Tester tester = new Tester(model, result, new FileOutputStream(logFile));
             tester.train(iterator);
             tester.test(iterator);
         } catch (FileNotFoundException e) {

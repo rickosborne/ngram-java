@@ -1,12 +1,17 @@
 package org.rickosborne.bigram.predictor;
 
+import org.rickosborne.bigram.storage.ITrigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 
 import java.util.HashMap;
 
 public class TrigramPredictor implements WordPredictor {
 
-    private HashMap<String, BigramPredictor> grams = new HashMap<String, BigramPredictor>();
+    private ITrigramStorage store;
+
+    public TrigramPredictor(ITrigramStorage store) {
+        this.store = store;
+    }
 
     @Override
     public void learn(String[] words) {
@@ -20,9 +25,7 @@ public class TrigramPredictor implements WordPredictor {
                 first = second;
                 continue;
             }
-            if (!grams.containsKey(first)) grams.put(first, new BigramPredictor());
-            String bigram[] = {second, third};
-            grams.get(first).learn(bigram);
+            store.add(first, second, third);
             first = second;
             second = third;
         }
@@ -32,8 +35,6 @@ public class TrigramPredictor implements WordPredictor {
     public Prediction predict(String[] words, String partial) {
         if (words.length < 2) return null;
         String first = words[words.length - 2], second = words[words.length - 1];
-        if (!grams.containsKey(first)) return null;
-        String[] bigramWords = {second};
-        return grams.get(first).predict(bigramWords, partial);
+        return store.get(first, second, partial);
     }
 }

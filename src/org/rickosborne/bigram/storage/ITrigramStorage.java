@@ -1,0 +1,10 @@
+package org.rickosborne.bigram.storage;
+
+import org.rickosborne.bigram.util.Prediction;
+
+public interface ITrigramStorage {
+
+    public void add(String firstWord, String secondWord, String thirdWord);
+    public Prediction get(String firstWord, String secondWord, String partial);
+
+}

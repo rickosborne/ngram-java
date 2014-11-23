@@ -4,6 +4,8 @@ import org.rickosborne.bigram.predictor.BigramPredictor;
 import org.rickosborne.bigram.predictor.DictionaryPredictor;
 import org.rickosborne.bigram.predictor.TrigramPredictor;
 import org.rickosborne.bigram.predictor.WordPredictor;
+import org.rickosborne.bigram.storage.*;
+import org.rickosborne.bigram.util.Config;
 import org.rickosborne.bigram.util.Prediction;
 import org.rickosborne.bigram.util.WordList;
 
@@ -12,20 +14,35 @@ import java.io.OutputStreamWriter;
 
 public class BigramModel2 {
 
-    private class WeightedWordList extends WordList {
-        public void learn(String word, int seen) {
-            this.words.put(word, seen + (this.words.containsKey(word) ? this.words.get(word) : 0));
+    public BigramModel2(Config config) {
+        predictors = new WordPredictor[3];
+        IDictionaryStorage dictionaryStorage;
+        IBigramStorage bigramStorage;
+        ITrigramStorage trigramStorage;
+        switch (config.get("storageType", "sqlite")) {
+            case "memory":
+                dictionaryStorage = new MemoryDictionaryStorage();
+                bigramStorage = new MemoryBigramStorage();
+                trigramStorage = new MemoryTrigramStorage();
+                break;
+            default:
+                String dbFile = config.get("sqliteFile", "words.sqlite");
+                dictionaryStorage = new SqliteDictionaryStorage(dbFile);
+                bigramStorage = new SqliteBigramStorage(dbFile);
+                trigramStorage = new SqliteTrigramStorage(dbFile);
         }
+        predictors[0] = new DictionaryPredictor(dictionaryStorage);
+        predictors[1] = new BigramPredictor(bigramStorage);
+        predictors[2] = new TrigramPredictor(trigramStorage);
+    }
+
+    private class WeightedWordList extends WordList {
         public Prediction predict() { return this.predict(null); }
     }
 
     private String[] names = { "dictionary", "bigram", "trigram" };
     private double[] weights = { 240, 200, 200 };
-    private WordPredictor[] predictors = {
-        new DictionaryPredictor(),
-        new BigramPredictor(),
-        new TrigramPredictor()
-    };
+    private WordPredictor[] predictors;
     private OutputStreamWriter logger = null;
 
     private void log(String message) {

@@ -10,7 +10,11 @@ public class WordList {
     protected HashMap<String, Integer> words = new HashMap<String, Integer>();
 
     public void learn(String word) {
-        this.words.put(word, 1 + (this.words.containsKey(word) ? this.words.get(word) : 0));
+        learn(word, 1);
+    }
+
+    public void learn(String word, int seen) {
+        this.words.put(word, seen + (this.words.containsKey(word) ? this.words.get(word) : 0));
     }
 
     public Prediction predict(String partial) {
