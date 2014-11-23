@@ -3,3 +3,5 @@
 data/
 out/
 log.txt
+*.sqlite
+lib/
