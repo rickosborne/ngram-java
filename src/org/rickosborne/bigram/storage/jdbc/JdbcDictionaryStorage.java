@@ -35,25 +35,34 @@ public class JdbcDictionaryStorage extends JdbcStorage implements IDictionarySto
                 "WHERE (SUBSTR(word, 1, ?) = ?);";
     }
 
-    public JdbcDictionaryStorage(String url) throws SQLException, ClassNotFoundException {
+    public JdbcDictionaryStorage(String url) {
         super(url);
     }
 
     @Override
-    public void add(String word) throws SQLException {
-        lookupStatement.setString(1, word);
-        ResultSet existing = lookupStatement.executeQuery();
-        PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
-        mutate.setString(1, word);
-        mutate.executeUpdate();
+    public void add(String word) {
+        try {
+            lookupStatement.setString(1, word);
+            ResultSet existing = lookupStatement.executeQuery();
+            PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
+            mutate.setString(1, word);
+            mutate.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public Prediction get(String partial) throws SQLException {
+    public Prediction get(String partial) {
         if ((partial == null) || (partial.length() == 0)) return null;
-        selectStatement.setInt(1, partial.length());
-        selectStatement.setString(2, partial);
-        return predictionFromQuery(selectStatement);
+        try {
+            selectStatement.setInt(1, partial.length());
+            selectStatement.setString(2, partial);
+            return predictionFromQuery(selectStatement);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

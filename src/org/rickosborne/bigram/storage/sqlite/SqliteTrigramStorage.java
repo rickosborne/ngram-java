@@ -26,25 +26,29 @@ public class SqliteTrigramStorage extends JdbcTrigramStorage implements ITrigram
                 "WHERE (rowid = ?);";
     }
 
-    public SqliteTrigramStorage(String dbFile) throws SQLException, ClassNotFoundException {
+    public SqliteTrigramStorage(String dbFile) {
         super(dbFile);
     }
 
     @Override
-    public void add(String firstWord, String secondWord, String thirdWord) throws SQLException {
-        lookupStatement.setString(1, firstWord);
-        lookupStatement.setString(2, secondWord);
-        lookupStatement.setString(3, thirdWord);
-        ResultSet existing = lookupStatement.executeQuery();
-        if (existing.next()) {
-            updateStatement.setInt(1, existing.getInt(1));
-            updateStatement.executeUpdate();
-        }
-        else {
-            insertStatement.setString(1, firstWord);
-            insertStatement.setString(2, secondWord);
-            insertStatement.setString(3, thirdWord);
-            insertStatement.executeUpdate();
+    public void add(String firstWord, String secondWord, String thirdWord) {
+        try {
+            lookupStatement.setString(1, firstWord);
+            lookupStatement.setString(2, secondWord);
+            lookupStatement.setString(3, thirdWord);
+            ResultSet existing = lookupStatement.executeQuery();
+            if (existing.next()) {
+                updateStatement.setInt(1, existing.getInt(1));
+                updateStatement.executeUpdate();
+            }
+            else {
+                insertStatement.setString(1, firstWord);
+                insertStatement.setString(2, secondWord);
+                insertStatement.setString(3, thirdWord);
+                insertStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

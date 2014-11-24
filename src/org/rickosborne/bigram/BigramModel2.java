@@ -1,9 +1,6 @@
 package org.rickosborne.bigram;
 
-import org.rickosborne.bigram.predictor.BigramPredictor;
-import org.rickosborne.bigram.predictor.DictionaryPredictor;
-import org.rickosborne.bigram.predictor.TrigramPredictor;
-import org.rickosborne.bigram.predictor.WordPredictor;
+import org.rickosborne.bigram.predictor.*;
 import org.rickosborne.bigram.storage.*;
 import org.rickosborne.bigram.storage.jdbc.JdbcBigramStorage;
 import org.rickosborne.bigram.storage.jdbc.JdbcDictionaryStorage;
@@ -13,6 +10,7 @@ import org.rickosborne.bigram.storage.memory.MemoryDictionaryStorage;
 import org.rickosborne.bigram.storage.memory.MemoryTrigramStorage;
 import org.rickosborne.bigram.storage.redis.RedisBigramStorage;
 import org.rickosborne.bigram.storage.redis.RedisDictionaryStorage;
+import org.rickosborne.bigram.storage.redis.RedisNgramStorage;
 import org.rickosborne.bigram.storage.redis.RedisTrigramStorage;
 import org.rickosborne.bigram.storage.sqlite.SqliteBigramStorage;
 import org.rickosborne.bigram.storage.sqlite.SqliteDictionaryStorage;
@@ -27,45 +25,53 @@ import java.sql.SQLException;
 
 public class BigramModel2 {
 
-    private String[] names = { "dictionary", "bigram", "trigram" };
+//    private String[] names = { "dictionary", "bigram", "trigram" };
+    private String[] names = { "ngram" };
     private double[] weights;
-    private WordPredictor[] predictors;
+    private IWordPredictor[] predictors;
     private OutputStreamWriter logger = null;
 
     public BigramModel2(Config config) throws SQLException, ClassNotFoundException {
-        predictors = new WordPredictor[3];
-        IDictionaryStorage dictionaryStorage;
-        IBigramStorage bigramStorage;
-        ITrigramStorage trigramStorage;
+//        predictors = new IWordPredictor[3];
+//        IDictionaryStorage dictionaryStorage;
+//        IBigramStorage bigramStorage;
+//        ITrigramStorage trigramStorage;
+        predictors = new IWordPredictor[1];
+        INgramStorage ngramStorage;
+        ngramStorage = new RedisNgramStorage(config);
         switch (config.get("storageType", "sqlite")) {
             case "memory":
-                dictionaryStorage = new MemoryDictionaryStorage();
-                bigramStorage = new MemoryBigramStorage();
-                trigramStorage = new MemoryTrigramStorage();
+//                dictionaryStorage = new MemoryDictionaryStorage();
+//                bigramStorage = new MemoryBigramStorage();
+//                trigramStorage = new MemoryTrigramStorage();
                 break;
             case "jdbc":
                 String jdbcUrl = config.get("jdbcUrl", "jdbc:mysql://localhost:3306/words");
-                dictionaryStorage = new JdbcDictionaryStorage(jdbcUrl);
-                bigramStorage = new JdbcBigramStorage(jdbcUrl);
-                trigramStorage = new JdbcTrigramStorage(jdbcUrl);
+//                dictionaryStorage = new JdbcDictionaryStorage(jdbcUrl);
+//                bigramStorage = new JdbcBigramStorage(jdbcUrl);
+//                trigramStorage = new JdbcTrigramStorage(jdbcUrl);
                 break;
             case "redis":
-                dictionaryStorage = new RedisDictionaryStorage(config);
-                bigramStorage = new RedisBigramStorage(config);
-                trigramStorage = new RedisTrigramStorage(config);
+//                dictionaryStorage = new RedisDictionaryStorage(config);
+//                bigramStorage = new RedisBigramStorage(config);
+//                trigramStorage = new RedisTrigramStorage(config);
+                ngramStorage = new RedisNgramStorage(config);
                 break;
             default:
-                dictionaryStorage = new SqliteDictionaryStorage(config.get("dictionarySqliteFile", "jdbc:sqlite:words-dict.sqlite"));
-                bigramStorage = new SqliteBigramStorage(config.get("bigramSqliteFile", "jdbc:sqlite:words-bi.sqlite"));
-                trigramStorage = new SqliteTrigramStorage(config.get("trigramSqliteFile", "jdbc:sqlite:words-tri.sqlite"));
+//                dictionaryStorage = new SqliteDictionaryStorage(config.get("dictionarySqliteFile", "jdbc:sqlite:words-dict.sqlite"));
+//                bigramStorage = new SqliteBigramStorage(config.get("bigramSqliteFile", "jdbc:sqlite:words-bi.sqlite"));
+//                trigramStorage = new SqliteTrigramStorage(config.get("trigramSqliteFile", "jdbc:sqlite:words-tri.sqlite"));
         }
-        predictors[0] = new DictionaryPredictor(dictionaryStorage);
-        predictors[1] = new BigramPredictor(bigramStorage);
-        predictors[2] = new TrigramPredictor(trigramStorage);
-        weights = new double[3];
-        weights[0] = config.get("dictionaryWeight", 200);
-        weights[1] = config.get("bigramWeight", 220);
-        weights[2] = config.get("trigramWeight", 240);
+//        predictors[0] = new DictionaryPredictor(dictionaryStorage);
+//        predictors[1] = new BigramPredictor(bigramStorage);
+//        predictors[2] = new TrigramPredictor(trigramStorage);
+        predictors[0] = new NgramPredictor(ngramStorage, config);
+        weights = new double[1];
+        weights[0] = config.get("ngramWeight", 300);
+//        weights = new double[3];
+//        weights[0] = config.get("dictionaryWeight", 200);
+//        weights[1] = config.get("bigramWeight", 220);
+//        weights[2] = config.get("trigramWeight", 240);
     }
 
     private class WeightedWordList extends WordList {
@@ -84,7 +90,7 @@ public class BigramModel2 {
     }
 
     public void learn(String[] words) throws SQLException {
-        for (WordPredictor predictor : predictors) {
+        for (IWordPredictor predictor : predictors) {
             predictor.learn(words);
         }
     }

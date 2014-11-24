@@ -18,6 +18,11 @@ public class Main {
                 maxTestLines = config.get("maxTestLines", 100);
         String inputFile = config.get("inputFile", null),
                 logFile = config.get("logFile", "log.txt");
+        if ((args.length > 1) && (args[0].equalsIgnoreCase("learn"))) {
+            inputFile = args[1];
+            System.out.println("Input: " + inputFile);
+            System.out.flush();
+        }
         if (inputFile != null) {
             in = new FileInputStream(inputFile);
         }

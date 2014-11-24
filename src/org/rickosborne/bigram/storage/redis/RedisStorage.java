@@ -4,7 +4,6 @@ import org.rickosborne.bigram.util.Config;
 import org.rickosborne.bigram.util.Prediction;
 import redis.clients.jedis.Jedis;
 
-import java.net.SocketTimeoutException;
 import java.util.Set;
 
 public class RedisStorage {

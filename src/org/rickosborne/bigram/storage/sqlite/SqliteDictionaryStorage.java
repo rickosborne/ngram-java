@@ -24,21 +24,25 @@ public class SqliteDictionaryStorage extends JdbcDictionaryStorage implements ID
                 "WHERE (ROWID = ?);";
     }
 
-    public SqliteDictionaryStorage(String dbFile) throws SQLException, ClassNotFoundException {
+    public SqliteDictionaryStorage(String dbFile) {
         super(dbFile);
     }
 
     @Override
-    public void add(String word) throws SQLException {
-        lookupStatement.setString(1, word);
-        ResultSet existing = lookupStatement.executeQuery();
-        if (existing.next()) {
-            updateStatement.setInt(1, existing.getInt(1));
-            updateStatement.executeUpdate();
-        }
-        else {
-            insertStatement.setString(1, word);
-            insertStatement.executeUpdate();
+    public void add(String word) {
+        try {
+            lookupStatement.setString(1, word);
+            ResultSet existing = lookupStatement.executeQuery();
+            if (existing.next()) {
+                updateStatement.setInt(1, existing.getInt(1));
+                updateStatement.executeUpdate();
+            }
+            else {
+                insertStatement.setString(1, word);
+                insertStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

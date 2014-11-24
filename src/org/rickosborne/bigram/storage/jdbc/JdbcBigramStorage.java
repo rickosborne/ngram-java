@@ -43,33 +43,46 @@ public class JdbcBigramStorage extends JdbcStorage implements IBigramStorage {
                 "WHERE (word1 = ?) AND (SUBSTR(word2, 1, ?) = ?);";
     }
 
-    public JdbcBigramStorage(String url) throws SQLException, ClassNotFoundException {
+    public JdbcBigramStorage(String url) {
         super(url);
-        selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
-    }
-
-    @Override
-    public void add(String firstWord, String secondWord) throws SQLException {
-        lookupStatement.setString(1, firstWord);
-        lookupStatement.setString(2, secondWord);
-        ResultSet existing = lookupStatement.executeQuery();
-        PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
-        mutate.setString(1, firstWord);
-        mutate.setString(2, secondWord);
-        mutate.executeUpdate();
-    }
-
-    @Override
-    public Prediction get(String firstWord, String partial) throws SQLException {
-        PreparedStatement select;
-        if ((partial == null) || (partial.length() == 0)) {
-            select = selectStatement;
-        } else {
-            select = selectWithPartialStatement;
-            select.setInt(2, partial.length());
-            select.setString(3, partial);
+        try {
+            selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        select.setString(1, firstWord);
-        return predictionFromQuery(select);
+    }
+
+    @Override
+    public void add(String firstWord, String secondWord) {
+        try {
+            lookupStatement.setString(1, firstWord);
+            lookupStatement.setString(2, secondWord);
+            ResultSet existing = lookupStatement.executeQuery();
+            PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
+            mutate.setString(1, firstWord);
+            mutate.setString(2, secondWord);
+            mutate.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public Prediction get(String firstWord, String partial) {
+        PreparedStatement select;
+        try {
+            if ((partial == null) || (partial.length() == 0)) {
+                select = selectStatement;
+            } else {
+                select = selectWithPartialStatement;
+                select.setInt(2, partial.length());
+                select.setString(3, partial);
+            }
+            select.setString(1, firstWord);
+            return predictionFromQuery(select);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

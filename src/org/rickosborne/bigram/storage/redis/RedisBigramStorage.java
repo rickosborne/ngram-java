@@ -14,13 +14,13 @@ public class RedisBigramStorage extends RedisStorage implements IBigramStorage {
     }
 
     @Override
-    public void add(String firstWord, String secondWord) throws SQLException {
+    public void add(String firstWord, String secondWord) {
         if ((firstWord == null) || firstWord.isEmpty() || (secondWord == null) || secondWord.isEmpty()) return;
         tryIncr(firstWord + " " + secondWord);
     }
 
     @Override
-    public Prediction get(String firstWord, String partial) throws SQLException {
+    public Prediction get(String firstWord, String partial) {
         if ((firstWord == null) || firstWord.isEmpty()) return null;
         String key = firstWord + " " + ((partial != null) && !partial.isEmpty() ? partial : "") + "*";
         return predictionFromKeys(jedis.keys(key));

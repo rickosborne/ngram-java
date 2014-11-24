@@ -6,10 +6,18 @@ import java.sql.SQLException;
 
 public class SqliteStorage extends JdbcStorage {
 
-    public SqliteStorage(String dbFile) throws ClassNotFoundException, SQLException {
+    public SqliteStorage(String dbFile) {
         super("jdbc:sqlite:" + dbFile);
-        Class.forName("org.sqlite.JDBC");
-        connection.createStatement().execute("PRAGMA synchronous = OFF;");
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        try {
+            connection.createStatement().execute("PRAGMA synchronous = OFF;");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 }

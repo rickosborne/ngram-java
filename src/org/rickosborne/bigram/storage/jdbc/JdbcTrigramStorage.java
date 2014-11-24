@@ -46,37 +46,50 @@ public class JdbcTrigramStorage extends JdbcStorage implements ITrigramStorage {
                 "WHERE (word1 = ?) AND (word2 = ?) AND (word3 = ?);";
     }
 
-    public JdbcTrigramStorage(String dbFile) throws SQLException, ClassNotFoundException {
+    public JdbcTrigramStorage(String dbFile) {
         super(dbFile);
-        selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
-    }
-
-    @Override
-    public void add(String firstWord, String secondWord, String thirdWord) throws SQLException {
-        lookupStatement.setString(1, firstWord);
-        lookupStatement.setString(2, secondWord);
-        lookupStatement.setString(3, thirdWord);
-        ResultSet existing = lookupStatement.executeQuery();
-        PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
-        mutate.setString(1, firstWord);
-        mutate.setString(2, secondWord);
-        mutate.setString(3, thirdWord);
-        mutate.executeUpdate();
-    }
-
-    @Override
-    public Prediction get(String firstWord, String secondWord, String partial) throws SQLException {
-        PreparedStatement select;
-        if ((partial == null) || (partial.length() == 0)) {
-            select = selectStatement;
-        } else {
-            select = selectWithPartialStatement;
-            select.setInt(3, partial.length());
-            select.setString(4, partial);
+        try {
+            selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        select.setString(1, firstWord);
-        select.setString(2, secondWord);
-        return predictionFromQuery(select);
+    }
+
+    @Override
+    public void add(String firstWord, String secondWord, String thirdWord) {
+        try {
+            lookupStatement.setString(1, firstWord);
+            lookupStatement.setString(2, secondWord);
+            lookupStatement.setString(3, thirdWord);
+            ResultSet existing = lookupStatement.executeQuery();
+            PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
+            mutate.setString(1, firstWord);
+            mutate.setString(2, secondWord);
+            mutate.setString(3, thirdWord);
+            mutate.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public Prediction get(String firstWord, String secondWord, String partial) {
+        PreparedStatement select;
+        try {
+            if ((partial == null) || (partial.length() == 0)) {
+                select = selectStatement;
+            } else {
+                select = selectWithPartialStatement;
+                select.setInt(3, partial.length());
+                select.setString(4, partial);
+            }
+            select.setString(1, firstWord);
+            select.setString(2, secondWord);
+            return predictionFromQuery(select);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

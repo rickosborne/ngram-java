@@ -24,23 +24,27 @@ public class SqliteBigramStorage extends JdbcBigramStorage {
                 "WHERE (ROWID = ?);";
     }
 
-    public SqliteBigramStorage(String url) throws SQLException, ClassNotFoundException {
+    public SqliteBigramStorage(String url) {
         super(url);
     }
 
     @Override
-    public void add(String firstWord, String secondWord) throws SQLException {
-        lookupStatement.setString(1, firstWord);
-        lookupStatement.setString(2, secondWord);
-        ResultSet existing = lookupStatement.executeQuery();
-        if (existing.next()) {
-            updateStatement.setInt(1, existing.getInt(1));
-            updateStatement.executeUpdate();
-        }
-        else {
-            insertStatement.setString(1, firstWord);
-            insertStatement.setString(2, secondWord);
-            insertStatement.executeUpdate();
+    public void add(String firstWord, String secondWord) {
+        try {
+            lookupStatement.setString(1, firstWord);
+            lookupStatement.setString(2, secondWord);
+            ResultSet existing = lookupStatement.executeQuery();
+            if (existing.next()) {
+                updateStatement.setInt(1, existing.getInt(1));
+                updateStatement.executeUpdate();
+            }
+            else {
+                insertStatement.setString(1, firstWord);
+                insertStatement.setString(2, secondWord);
+                insertStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

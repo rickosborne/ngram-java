@@ -14,28 +14,37 @@ public class JdbcStorage {
 
     protected static String tableName, createSQL, insertSQL, updateSQL, selectSQL, lookupSQL;
 
-    public JdbcStorage(String url) throws ClassNotFoundException, SQLException {
+    public JdbcStorage(String url) {
         // Class.forName("org.mariadb.jdbc.Driver");
-        connection = DriverManager.getConnection(url);
-        Statement statement = connection.createStatement();
-        statement.executeUpdate(createSQL);
-        insertStatement = connection.prepareStatement(insertSQL);
-        updateStatement = connection.prepareStatement(updateSQL);
-        selectStatement = connection.prepareStatement(selectSQL);
-        lookupStatement = connection.prepareStatement(lookupSQL);
+        try {
+            connection = DriverManager.getConnection(url);
+            Statement statement = connection.createStatement();
+            statement.executeUpdate(createSQL);
+            insertStatement = connection.prepareStatement(insertSQL);
+            updateStatement = connection.prepareStatement(updateSQL);
+            selectStatement = connection.prepareStatement(selectSQL);
+            lookupStatement = connection.prepareStatement(lookupSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    protected Prediction predictionFromQuery(PreparedStatement statement) throws SQLException {
-        ResultSet resultSet = statement.executeQuery();
+    protected Prediction predictionFromQuery(PreparedStatement statement) {
+        ResultSet resultSet;
         int totalSeen = 0, maxSeen = 0, seen;
         String word = null;
-        while(resultSet.next()) {
-            seen = resultSet.getInt(seenColumn);
-            totalSeen += seen;
-            if (seen > maxSeen) {
-                maxSeen = seen;
-                word = resultSet.getString(wordColumn);
+        try {
+            resultSet = statement.executeQuery();
+            while(resultSet.next()) {
+                seen = resultSet.getInt(seenColumn);
+                totalSeen += seen;
+                if (seen > maxSeen) {
+                    maxSeen = seen;
+                    word = resultSet.getString(wordColumn);
+                }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         if (word != null) return new Prediction(word, maxSeen, totalSeen);
         return null;
