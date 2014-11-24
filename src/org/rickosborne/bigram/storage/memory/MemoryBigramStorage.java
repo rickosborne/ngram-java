@@ -1,5 +1,6 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.memory;
 
+import org.rickosborne.bigram.storage.IBigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 import org.rickosborne.bigram.util.WordList;
 

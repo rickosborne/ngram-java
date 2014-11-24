@@ -67,7 +67,7 @@ public class Tester {
         }
     }
 
-    private static String[] wordsFromLine (String line) {
+    public static String[] wordsFromLine (String line) {
         if ((line == null) || line.isEmpty()) return empty;
         String result = line.toLowerCase();
         for (int i = 0, patternCount = patterns.length; i < patternCount; i++) {

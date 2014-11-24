@@ -1,27 +1,31 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.jdbc;
 
+import org.rickosborne.bigram.storage.IBigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-public class SqliteBigramStorage extends SqliteStorage implements IBigramStorage {
+public class JdbcBigramStorage extends JdbcStorage implements IBigramStorage {
 
-    private PreparedStatement selectWithPartialStatement;
-    private static final String selectWithPartialSQL;
+    protected PreparedStatement selectWithPartialStatement;
+    protected static String selectWithPartialSQL;
 
     static {
         tableName = "bigrams";
         createSQL = "" +
                 "CREATE TABLE IF NOT EXISTS " + tableName + " (" +
-                "word1 STRING, " +
-                "word2 STRING, " +
-                "seen INTEGER, " +
+                "word1 VARCHAR(50) NOT NULL, " +
+                "word2 VARCHAR(50) NOT NULL, " +
+                "seen INT UNSIGNED NOT NULL, " +
                 "PRIMARY KEY (word1, word2)" +
                 ");";
         lookupSQL = "" +
-                "SELECT ROWID " +
+                "SELECT seen " +
                 "FROM " + tableName + " " +
-                "WHERE (word1 = ?) AND (word2 = ?);";
+                "WHERE (word1 = ?) AND (word2 = ?)" +
+                "LIMIT 1;";
         insertSQL = "" +
                 "INSERT INTO " + tableName + " (word1, word2, seen) " +
                 "VALUES (?, ?, 1);";
@@ -39,8 +43,8 @@ public class SqliteBigramStorage extends SqliteStorage implements IBigramStorage
                 "WHERE (word1 = ?) AND (SUBSTR(word2, 1, ?) = ?);";
     }
 
-    public SqliteBigramStorage(String dbFile) throws SQLException, ClassNotFoundException {
-        super(dbFile);
+    public JdbcBigramStorage(String url) throws SQLException, ClassNotFoundException {
+        super(url);
         selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
     }
 
@@ -49,15 +53,10 @@ public class SqliteBigramStorage extends SqliteStorage implements IBigramStorage
         lookupStatement.setString(1, firstWord);
         lookupStatement.setString(2, secondWord);
         ResultSet existing = lookupStatement.executeQuery();
-        if (existing.next()) {
-            updateStatement.setInt(1, existing.getInt(1));
-            updateStatement.executeUpdate();
-        }
-        else {
-            insertStatement.setString(1, firstWord);
-            insertStatement.setString(2, secondWord);
-            insertStatement.executeUpdate();
-        }
+        PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
+        mutate.setString(1, firstWord);
+        mutate.setString(2, secondWord);
+        mutate.executeUpdate();
     }
 
     @Override

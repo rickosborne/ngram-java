@@ -2,17 +2,16 @@ package org.rickosborne;
 
 import org.rickosborne.bigram.BigramModel2;
 import org.rickosborne.bigram.Tester;
-import org.rickosborne.bigram.util.Config;
-import org.rickosborne.bigram.util.LineReader;
-import org.rickosborne.bigram.util.TestResult;
+import org.rickosborne.bigram.util.*;
 
 import java.io.*;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 
 public class Main {
 
-    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException {
+    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException, InterruptedException {
         Config config = new Config("config.properties");
         InputStream in = System.in;
         int maxTrainLines = config.get("maxTrainLines", 10000),
@@ -23,6 +22,21 @@ public class Main {
             in = new FileInputStream(inputFile);
         }
         BigramModel2 model = new BigramModel2(config);
+        if ((args.length > 1) && (args[0].equalsIgnoreCase("predict"))) {
+            String words[] = Tester.wordsFromLine(args[1]);
+            WordList guesses = model.guess(words, null, "");
+            if (guesses == null) System.out.println("No prediction.");
+            else {
+                Prediction prediction = guesses.predict(null);
+                if (prediction == null) System.out.println("No prediction.");
+                else {
+                    System.out.println(String.format("Answer: %s %.2f%%", prediction.getWord(), 100.0f * prediction.getChance()));
+                    System.out.println(guesses.toString());
+                    System.out.flush();
+                }
+            }
+            return;
+        }
         LineReader.TrainTestIterator iterator = new LineReader.TrainTestIterator(in, maxTrainLines, maxTestLines);
         TestResult result = new TestResult();
         Tester tester = new Tester(model, result, new FileOutputStream(logFile));

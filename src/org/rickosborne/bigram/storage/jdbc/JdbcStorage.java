@@ -1,10 +1,10 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.jdbc;
 
 import org.rickosborne.bigram.util.Prediction;
-
+import org.mariadb.jdbc.Driver;
 import java.sql.*;
 
-public class SqliteStorage {
+public class JdbcStorage {
 
     protected int seenColumn = 2;
     protected int wordColumn = 1;
@@ -14,12 +14,11 @@ public class SqliteStorage {
 
     protected static String tableName, createSQL, insertSQL, updateSQL, selectSQL, lookupSQL;
 
-    public SqliteStorage(String dbFile) throws ClassNotFoundException, SQLException {
-        Class.forName("org.sqlite.JDBC");
-        connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile);
+    public JdbcStorage(String url) throws ClassNotFoundException, SQLException {
+        // Class.forName("org.mariadb.jdbc.Driver");
+        connection = DriverManager.getConnection(url);
         Statement statement = connection.createStatement();
         statement.executeUpdate(createSQL);
-        connection.createStatement().execute("PRAGMA synchronous = OFF;");
         insertStatement = connection.prepareStatement(insertSQL);
         updateStatement = connection.prepareStatement(updateSQL);
         selectStatement = connection.prepareStatement(selectSQL);

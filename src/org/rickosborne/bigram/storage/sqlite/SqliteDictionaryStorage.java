@@ -1,13 +1,13 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.sqlite;
 
-import org.rickosborne.bigram.util.Prediction;
+import org.rickosborne.bigram.storage.IDictionaryStorage;
+import org.rickosborne.bigram.storage.jdbc.JdbcDictionaryStorage;
 
 import java.sql.*;
 
-public class SqliteDictionaryStorage extends SqliteStorage implements IDictionaryStorage {
+public class SqliteDictionaryStorage extends JdbcDictionaryStorage implements IDictionaryStorage {
 
     static {
-        tableName = "dictionary";
         createSQL = "" +
                 "CREATE TABLE IF NOT EXISTS " + tableName + " (" +
                 "word STRING, " +
@@ -18,17 +18,10 @@ public class SqliteDictionaryStorage extends SqliteStorage implements IDictionar
                 "SELECT ROWID " +
                 "FROM " + tableName + " " +
                 "WHERE (word = ?);";
-        insertSQL = "" +
-                "INSERT INTO " + tableName + " (word, seen) " +
-                "VALUES (?, 1);";
         updateSQL = "" +
                 "UPDATE " + tableName + " " +
                 "SET seen = seen + 1 " +
-                "WHERE (word = ?);";
-        selectSQL = "" +
-                "SELECT word, seen " +
-                "FROM " + tableName + " " +
-                "WHERE (SUBSTR(word, 1, ?) = ?);";
+                "WHERE (ROWID = ?);";
     }
 
     public SqliteDictionaryStorage(String dbFile) throws SQLException, ClassNotFoundException {
@@ -49,11 +42,4 @@ public class SqliteDictionaryStorage extends SqliteStorage implements IDictionar
         }
     }
 
-    @Override
-    public Prediction get(String partial) throws SQLException {
-        if ((partial == null) || (partial.length() == 0)) return null;
-        selectStatement.setInt(1, partial.length());
-        selectStatement.setString(2, partial);
-        return predictionFromQuery(selectStatement);
-    }
 }

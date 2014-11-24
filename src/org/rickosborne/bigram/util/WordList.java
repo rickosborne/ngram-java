@@ -15,6 +15,23 @@ public class WordList {
         this.words.put(word, seen + (this.words.containsKey(word) ? this.words.get(word) : 0));
     }
 
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        String delim = null;
+        result.append("{");
+        for (String word : words.keySet()) {
+            int count = words.get(word);
+            if (delim == null) delim = ",";
+            else result.append(delim);
+            result.append("\"");
+            result.append(word);
+            result.append("\":");
+            result.append(String.valueOf(count));
+        }
+        result.append("}");
+        return result.toString();
+    }
+
     public Prediction predict(String partial) {
         String guess = null;
         int max = 0, total = 0;

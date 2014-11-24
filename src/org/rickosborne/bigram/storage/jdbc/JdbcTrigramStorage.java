@@ -1,34 +1,19 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.jdbc;
 
+import org.rickosborne.bigram.storage.ITrigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-public class SqliteTrigramStorage extends SqliteStorage implements ITrigramStorage {
+public class JdbcTrigramStorage extends JdbcStorage implements ITrigramStorage {
 
     private static final String selectWithPartialSQL;
+    private PreparedStatement selectWithPartialStatement;
 
     static {
         tableName = "trigrams";
-        createSQL = "" +
-                "CREATE TABLE IF NOT EXISTS " + tableName +" (" +
-                "word1 STRING, " +
-                "word2 STRING, " +
-                "word3 STRING, " +
-                "seen INTEGER, " +
-                "PRIMARY KEY (word1, word2, word3)" +
-                ");";
-        lookupSQL = "" +
-                "SELECT ROWID " +
-                "FROM " + tableName + " " +
-                "WHERE (word1 = ?) AND (word2 = ?) AND (word3 = ?);";
-        insertSQL = "" +
-                "INSERT INTO " + tableName + " (word1, word2, word3, seen) " +
-                "VALUES (?, ?, ?, 1);";
-        updateSQL = "" +
-                "UPDATE " + tableName + " " +
-                "SET seen = seen + 1 " +
-                "WHERE (rowid = ?);";
         selectSQL = "" +
                 "SELECT word3, seen " +
                 "FROM " + tableName + " " +
@@ -39,11 +24,29 @@ public class SqliteTrigramStorage extends SqliteStorage implements ITrigramStora
                 "FROM " + tableName + " " +
                 "WHERE (word1 = ?) AND (word2 = ?) AND (SUBSTR(word3, 1, ?) = ?)" +
                 "ORDER BY 2 DESC;";
+        insertSQL = "" +
+                "INSERT INTO " + tableName + " (word1, word2, word3, seen) " +
+                "VALUES (?, ?, ?, 1);";
+        createSQL = "" +
+                "CREATE TABLE IF NOT EXISTS " + tableName +" (" +
+                "word1 VARCHAR(50) NOT NULL, " +
+                "word2 VARCHAR(50) NOT NULL, " +
+                "word3 VARCHAR(50) NOT NULL, " +
+                "seen INT UNSIGNED NOT NULL, " +
+                "PRIMARY KEY (word1, word2, word3)" +
+                ");";
+        lookupSQL = "" +
+                "SELECT seen " +
+                "FROM " + tableName + " " +
+                "WHERE (word1 = ?) AND (word2 = ?) AND (word3 = ?)" +
+                "LIMIT 1;";
+        updateSQL = "" +
+                "UPDATE " + tableName + " " +
+                "SET seen = seen + 1 " +
+                "WHERE (word1 = ?) AND (word2 = ?) AND (word3 = ?);";
     }
 
-    private PreparedStatement selectWithPartialStatement;
-
-    public SqliteTrigramStorage(String dbFile) throws SQLException, ClassNotFoundException {
+    public JdbcTrigramStorage(String dbFile) throws SQLException, ClassNotFoundException {
         super(dbFile);
         selectWithPartialStatement = connection.prepareStatement(selectWithPartialSQL);
     }
@@ -54,16 +57,11 @@ public class SqliteTrigramStorage extends SqliteStorage implements ITrigramStora
         lookupStatement.setString(2, secondWord);
         lookupStatement.setString(3, thirdWord);
         ResultSet existing = lookupStatement.executeQuery();
-        if (existing.next()) {
-            updateStatement.setInt(1, existing.getInt(1));
-            updateStatement.executeUpdate();
-        }
-        else {
-            insertStatement.setString(1, firstWord);
-            insertStatement.setString(2, secondWord);
-            insertStatement.setString(3, thirdWord);
-            insertStatement.executeUpdate();
-        }
+        PreparedStatement mutate = existing.next() ? updateStatement : insertStatement;
+        mutate.setString(1, firstWord);
+        mutate.setString(2, secondWord);
+        mutate.setString(3, thirdWord);
+        mutate.executeUpdate();
     }
 
     @Override
@@ -80,4 +78,5 @@ public class SqliteTrigramStorage extends SqliteStorage implements ITrigramStora
         select.setString(2, secondWord);
         return predictionFromQuery(select);
     }
+
 }

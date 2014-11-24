@@ -1,6 +1,7 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.memory;
 
 import org.rickosborne.bigram.predictor.BigramPredictor;
+import org.rickosborne.bigram.storage.ITrigramStorage;
 import org.rickosborne.bigram.util.Prediction;
 
 import java.sql.SQLException;

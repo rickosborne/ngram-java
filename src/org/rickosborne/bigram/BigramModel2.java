@@ -5,6 +5,18 @@ import org.rickosborne.bigram.predictor.DictionaryPredictor;
 import org.rickosborne.bigram.predictor.TrigramPredictor;
 import org.rickosborne.bigram.predictor.WordPredictor;
 import org.rickosborne.bigram.storage.*;
+import org.rickosborne.bigram.storage.jdbc.JdbcBigramStorage;
+import org.rickosborne.bigram.storage.jdbc.JdbcDictionaryStorage;
+import org.rickosborne.bigram.storage.jdbc.JdbcTrigramStorage;
+import org.rickosborne.bigram.storage.memory.MemoryBigramStorage;
+import org.rickosborne.bigram.storage.memory.MemoryDictionaryStorage;
+import org.rickosborne.bigram.storage.memory.MemoryTrigramStorage;
+import org.rickosborne.bigram.storage.redis.RedisBigramStorage;
+import org.rickosborne.bigram.storage.redis.RedisDictionaryStorage;
+import org.rickosborne.bigram.storage.redis.RedisTrigramStorage;
+import org.rickosborne.bigram.storage.sqlite.SqliteBigramStorage;
+import org.rickosborne.bigram.storage.sqlite.SqliteDictionaryStorage;
+import org.rickosborne.bigram.storage.sqlite.SqliteTrigramStorage;
 import org.rickosborne.bigram.util.Config;
 import org.rickosborne.bigram.util.Prediction;
 import org.rickosborne.bigram.util.WordList;
@@ -31,10 +43,21 @@ public class BigramModel2 {
                 bigramStorage = new MemoryBigramStorage();
                 trigramStorage = new MemoryTrigramStorage();
                 break;
+            case "jdbc":
+                String jdbcUrl = config.get("jdbcUrl", "jdbc:mysql://localhost:3306/words");
+                dictionaryStorage = new JdbcDictionaryStorage(jdbcUrl);
+                bigramStorage = new JdbcBigramStorage(jdbcUrl);
+                trigramStorage = new JdbcTrigramStorage(jdbcUrl);
+                break;
+            case "redis":
+                dictionaryStorage = new RedisDictionaryStorage(config);
+                bigramStorage = new RedisBigramStorage(config);
+                trigramStorage = new RedisTrigramStorage(config);
+                break;
             default:
-                dictionaryStorage = new SqliteDictionaryStorage(config.get("dictionarySqliteFile", "words-dict.sqlite"));
-                bigramStorage = new SqliteBigramStorage(config.get("bigramSqliteFile", "words-bi.sqlite"));
-                trigramStorage = new SqliteTrigramStorage(config.get("trigramSqliteFile", "words-tri.sqlite"));
+                dictionaryStorage = new SqliteDictionaryStorage(config.get("dictionarySqliteFile", "jdbc:sqlite:words-dict.sqlite"));
+                bigramStorage = new SqliteBigramStorage(config.get("bigramSqliteFile", "jdbc:sqlite:words-bi.sqlite"));
+                trigramStorage = new SqliteTrigramStorage(config.get("trigramSqliteFile", "jdbc:sqlite:words-tri.sqlite"));
         }
         predictors[0] = new DictionaryPredictor(dictionaryStorage);
         predictors[1] = new BigramPredictor(bigramStorage);
@@ -50,7 +73,7 @@ public class BigramModel2 {
     }
 
     private void log(String message) throws IOException {
-        this.logger.write(message);
+        if (this.logger != null) this.logger.write(message);
     }
 
     public void setLogger(OutputStreamWriter logger) throws IOException {
@@ -66,8 +89,8 @@ public class BigramModel2 {
         }
     }
 
-    public String predict(String[] words, String partial, String answer) throws IOException, SQLException {
-        WeightedWordList guesses = new WeightedWordList();
+    public WordList guess(String[] words, String partial, String answer) throws SQLException, IOException {
+        WordList guesses = new WeightedWordList();
         for (int i = 0, predictorCount = predictors.length; i < predictorCount; i++) {
             Prediction guess = predictors[i].predict(words, partial);
             if ((guess != null) && (guess.getWord() != null)) {
@@ -77,12 +100,12 @@ public class BigramModel2 {
                 String word = guess.getWord();
                 boolean correct = word.equals(answer);
                 log(String.format(
-                    "%s\t%s\t%d\t%d\t%d\t",
-                    word,
-                    correct ? "Y" : "N",
-                    seen,
-                    size,
-                    vote
+                        "%s\t%s\t%d\t%d\t%d\t",
+                        word,
+                        correct ? "Y" : "N",
+                        seen,
+                        size,
+                        vote
                 ));
                 guesses.learn(word, vote);
             }
@@ -90,7 +113,12 @@ public class BigramModel2 {
                 log("\t\t\t\t\t");
             }
         }
-        Prediction prediction = guesses.predict();
+        return guesses;
+    }
+
+    public String predict(String[] words, String partial, String answer) throws IOException, SQLException {
+        WordList guesses = guess(words, partial, answer);
+        Prediction prediction = guesses.predict(null);
         if (prediction == null) return null;
         return prediction.getWord();
     }

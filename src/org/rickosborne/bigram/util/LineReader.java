@@ -32,6 +32,10 @@ public class LineReader {
             int percentBefore = (int) Math.floor(this.currentLine * 100d / this.totalLines);
             this.currentLine++;
             int percentAfter = (int) Math.floor(this.currentLine * 100d / this.totalLines);
+            if ((this.currentLine % 100) == 0) {
+                System.out.print(".");
+                System.out.flush();
+            }
             if (percentBefore != percentAfter) {
                 System.out.print("%");
                 System.out.flush();

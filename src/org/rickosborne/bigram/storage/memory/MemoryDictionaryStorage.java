@@ -1,6 +1,7 @@
-package org.rickosborne.bigram.storage;
+package org.rickosborne.bigram.storage.memory;
 
 import org.rickosborne.bigram.predictor.DictionaryPredictor;
+import org.rickosborne.bigram.storage.IDictionaryStorage;
 import org.rickosborne.bigram.util.Prediction;
 
 import java.util.HashMap;
