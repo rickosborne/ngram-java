@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 public class MemoryTrigramStorage implements ITrigramStorage {
 
-    private HashMap<String, BigramPredictor> grams = new HashMap<>();
+    private HashMap<String, BigramPredictor> grams = new HashMap<String, BigramPredictor>();
 
     @Override
     public void add(String firstWord, String secondWord, String thirdWord) {

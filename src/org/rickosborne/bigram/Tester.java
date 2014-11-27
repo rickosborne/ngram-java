@@ -81,7 +81,7 @@ public class Tester {
         return words.toArray(new String[words.size()]);
     }
 
-    public void train (LineReader.TrainTestIterator iterator) throws SQLException {
+    public void train (LineReader.TrainTestIterator iterator) {
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
         result.memoryBefore = runtime.totalMemory() - runtime.freeMemory();
@@ -93,7 +93,7 @@ public class Tester {
         }
     }
 
-    public void test (LineReader.TrainTestIterator iterator) throws IOException, SQLException {
+    public void test (LineReader.TrainTestIterator iterator) {
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
         result.memoryAfter = runtime.totalMemory() - runtime.freeMemory();

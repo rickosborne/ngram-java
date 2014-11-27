@@ -2,6 +2,7 @@ package org.rickosborne.bigram.predictor;
 
 import org.rickosborne.bigram.storage.INgramStorage;
 import org.rickosborne.bigram.util.Config;
+import org.rickosborne.bigram.util.IWordSpace;
 import org.rickosborne.bigram.util.Prediction;
 
 import java.util.ArrayList;
@@ -11,9 +12,11 @@ public class NgramPredictor implements IWordPredictor {
 
     private INgramStorage store;
     private int maxWords;
+    private IWordSpace wordSpace;
 
-    public NgramPredictor(INgramStorage store, Config config) {
+    public NgramPredictor(INgramStorage store, IWordSpace wordSpace, Config config) {
         this.store = store;
+        this.wordSpace = wordSpace;
         this.maxWords = config.get("ngramMaxWords", 6);
     }
 
@@ -25,7 +28,7 @@ public class NgramPredictor implements IWordPredictor {
             boolean firstWord = true;
             for (int j = 0, k = i; (j < maxWords) && (k < l); j++, k++) {
                 String word = words[k];
-                if ((word == null) || word.isEmpty()) continue;
+                if ((word == null) || word.isEmpty() || (wordSpace.idForWord(word) == 0)) continue;
                 if (firstWord) firstWord = false;
                 else key += " ";
                 key += word;
@@ -40,9 +43,11 @@ public class NgramPredictor implements IWordPredictor {
             StringBuilder builder = new StringBuilder();
             boolean firstWord = true;
             for (int wordNum = words.length - wordCount; wordNum < words.length; wordNum++) {
+                String word = words[wordNum];
+                if (wordSpace.idForWord(word) == 0) continue;
                 if (firstWord) firstWord = false;
                 else builder.append(" ");
-                builder.append(words[wordNum]);
+                builder.append(word);
             }
             Prediction prediction = store.get(wordCount + 1, builder.toString(), partial);
             if (prediction != null) return prediction;

@@ -3,9 +3,6 @@ package org.rickosborne.bigram.util;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * Created by rosborne on 11/6/14.
- */
 public class LineReader {
 
     public static interface Iterator {

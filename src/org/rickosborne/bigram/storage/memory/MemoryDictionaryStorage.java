@@ -8,7 +8,7 @@ import java.util.HashMap;
 
 public class MemoryDictionaryStorage implements IDictionaryStorage {
 
-    private HashMap<String, DictionaryPredictor.DictionaryWords> byPartial = new HashMap<>();
+    private HashMap<String, DictionaryPredictor.DictionaryWords> byPartial = new HashMap<String, DictionaryPredictor.DictionaryWords>();
 
     @Override
     public void add(String word) {

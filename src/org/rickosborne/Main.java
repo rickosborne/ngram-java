@@ -5,13 +5,11 @@ import org.rickosborne.bigram.Tester;
 import org.rickosborne.bigram.util.*;
 
 import java.io.*;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.text.DecimalFormat;
 
 public class Main {
 
-    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException, InterruptedException {
+    public static void main(String[] args) throws IOException {
         Config config = new Config("config.properties");
         InputStream in = System.in;
         int maxTrainLines = config.get("maxTrainLines", 10000),
