@@ -1,0 +1,30 @@
+{
+  "maxTrainLines": 10000000,
+  "maxTestLines": 1,
+  "inputFile": "data/en_US/en_US.blogs.txt",
+  "logFile": "log.txt",
+  "storageType": "mongo",
+  "dictionarySqliteFile": "jdbc:sqlite:words-dict.sqlite",
+  "bigramSqliteFile": "jdbc:sqlite:words-bi.sqlite",
+  "trigramSqliteFile": "jdbc:sqlite:words-tri.sqlite",
+  "jdbcUrl": "jdbc:mysql://127.0.0.1:3306/words?user=root",
+  "redisHost": "localhost",
+  "redisPort": 6379,
+  "ngramWeight": 300,
+  "ngramMaxWords": 7,
+  "learnWords": false,
+  "predictors": {
+    "ngram": {
+      "weight": 300,
+      "maxWords": 10,
+      "storage": "mongo",
+      "collection": "ngram"
+    }
+  },
+  "wordSpace": {
+    "type": "static",
+    "storage": "mongo",
+    "collection": "wordSpace",
+    "dictionaryFile": "data/dictionary.txt"
+  }
+}

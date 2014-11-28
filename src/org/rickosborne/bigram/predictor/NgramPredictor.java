@@ -24,15 +24,12 @@ public class NgramPredictor implements IWordPredictor {
     public void learn(String[] words) {
         if (words.length < 1) return;
         for (int i = 0, l = words.length; i < l; i++) {
-            String key = "";
-            boolean firstWord = true;
+            ArrayList<String> keyWords = new ArrayList<String>();
             for (int j = 0, k = i; (j < maxWords) && (k < l); j++, k++) {
                 String word = words[k];
                 if ((word == null) || word.isEmpty() || (wordSpace.idForWord(word) == 0)) continue;
-                if (firstWord) firstWord = false;
-                else key += " ";
-                key += word;
-                store.add(j + 1, key);
+                keyWords.add(word);
+                store.add(keyWords.toArray(new String[keyWords.size()]));
             }
         }
     }
@@ -40,19 +37,16 @@ public class NgramPredictor implements IWordPredictor {
     @Override
     public Prediction predict(String[] words, String partial) {
         for (int wordCount = Math.min(maxWords - 1, words.length); wordCount > 0; wordCount--) {
-            StringBuilder builder = new StringBuilder();
-            boolean firstWord = true;
+            ArrayList<String> keyWords = new ArrayList<String>();
             for (int wordNum = words.length - wordCount; wordNum < words.length; wordNum++) {
                 String word = words[wordNum];
                 if (wordSpace.idForWord(word) == 0) continue;
-                if (firstWord) firstWord = false;
-                else builder.append(" ");
-                builder.append(word);
+                keyWords.add(word);
             }
-            Prediction prediction = store.get(wordCount + 1, builder.toString(), partial);
+            Prediction prediction = store.get(keyWords.toArray(new String[keyWords.size()]), partial);
             if (prediction != null) return prediction;
         }
         if ((partial == null) || partial.isEmpty()) return null;
-        return store.get(1, "", partial);
+        return store.get(new String[0], partial);
     }
 }

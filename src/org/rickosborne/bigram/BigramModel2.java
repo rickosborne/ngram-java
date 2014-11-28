@@ -1,78 +1,121 @@
 package org.rickosborne.bigram;
 
-import org.rickosborne.bigram.predictor.*;
-import org.rickosborne.bigram.storage.*;
-import org.rickosborne.bigram.storage.jdbc.JdbcBigramStorage;
-import org.rickosborne.bigram.storage.jdbc.JdbcDictionaryStorage;
-import org.rickosborne.bigram.storage.jdbc.JdbcTrigramStorage;
-import org.rickosborne.bigram.storage.memory.MemoryBigramStorage;
-import org.rickosborne.bigram.storage.memory.MemoryDictionaryStorage;
-import org.rickosborne.bigram.storage.memory.MemoryTrigramStorage;
-import org.rickosborne.bigram.storage.redis.*;
-import org.rickosborne.bigram.storage.sqlite.SqliteBigramStorage;
-import org.rickosborne.bigram.storage.sqlite.SqliteDictionaryStorage;
-import org.rickosborne.bigram.storage.sqlite.SqliteTrigramStorage;
+import org.json.JSONObject;
+import org.rickosborne.bigram.predictor.IWordPredictor;
+import org.rickosborne.bigram.storage.IWordSpaceStorage;
 import org.rickosborne.bigram.util.*;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.sql.SQLException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+
+import static org.rickosborne.bigram.util.Util.titleCase;
 
 public class BigramModel2 {
 
-//    private String[] names = { "dictionary", "bigram", "trigram" };
-    private String[] names = { "ngram" };
+    private String[] names;
     private double[] weights;
     private IWordPredictor[] predictors;
     private OutputStreamWriter logger = null;
     private IWordSpace wordSpace;
+    private final static String PKG_NAME = BigramModel2.class.getPackage().getName();
+    private final static String PKG_PREDICTOR = PKG_NAME + ".predictor.";
+    private final static String PKG_STORAGE = PKG_NAME + ".storage.";
+    private final static String PKG_UTIL = PKG_NAME + ".util.";
+
+    private IWordPredictor buildPredictor(String name, JSONObject options, Config config) {
+        try {
+            String storageName = options.optString("storage", "memory");
+            if ((storageName == null) || storageName.isEmpty()) return null;
+            Class<?> predictorClass = Class.forName(PKG_PREDICTOR + titleCase(name) + "Predictor");
+            if (predictorClass == null) return null;
+            Class<?> storageClass = Class.forName(PKG_STORAGE + storageName.toLowerCase() + "." + titleCase(storageName) + titleCase(name) + "Storage");
+            if (storageClass == null) return null;
+            Class[] interfaces = storageClass.getInterfaces();
+            Class storageInterface = interfaces[0];
+            for (Class iface : interfaces) if (iface.getSimpleName().contains("Storage")) storageInterface = iface;
+            Constructor predictorConstructor = predictorClass.getDeclaredConstructor(storageInterface, IWordSpace.class, config.getClass());
+            if (predictorConstructor == null) return null;
+            Constructor storageConstructor;
+            try {
+                storageConstructor = storageClass.getDeclaredConstructor(Config.class);
+                return (IWordPredictor) predictorConstructor.newInstance(storageConstructor.newInstance(config), wordSpace, config);
+            } catch (NoSuchMethodException e) {
+                storageConstructor = storageClass.getDeclaredConstructor(JSONObject.class);
+                return (IWordPredictor) predictorConstructor.newInstance(storageConstructor.newInstance(options), wordSpace, config);
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private IWordSpace buildWordSpace(Config config) {
+        JSONObject options = config.getObject("wordSpace");
+        String storageType = options.optString("storage", "memory");
+        Constructor storageConstructor;
+        IWordSpaceStorage storage;
+        try {
+            Class<?> storageClass = Class.forName(PKG_STORAGE + storageType.toLowerCase() + "." + titleCase(storageType) + "WordSpaceStorage");
+            try {
+                storageConstructor = storageClass.getDeclaredConstructor(Config.class);
+                storage = (IWordSpaceStorage) storageConstructor.newInstance(config);
+            } catch (NoSuchMethodException e) {
+                storageConstructor = storageClass.getDeclaredConstructor(options.getClass());
+                storage = (IWordSpaceStorage) storageConstructor.newInstance(options);
+            }
+            String dictionaryFile = options.optString("dictionaryFile", "");
+            String spaceType = options.optString("type", "static");
+            Class<?> typeClass = Class.forName(PKG_UTIL + titleCase(spaceType) + "WordSpace");
+            Constructor typeConstructor = typeClass.getDeclaredConstructor(IWordSpaceStorage.class, String.class);
+            return (IWordSpace) typeConstructor.newInstance(storage, dictionaryFile);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private void buildPredictors(Config config) {
+        JSONObject predictorConfig = config.getObject("predictors");
+        ArrayList<IWordPredictor> predictorList = new ArrayList<IWordPredictor>();
+        ArrayList<Double> weightList = new ArrayList<Double>();
+        ArrayList<String> nameList = new ArrayList<String>();
+        for (String predictorName : JSONObject.getNames(predictorConfig)) {
+            JSONObject options = predictorConfig.optJSONObject(predictorName);
+            if (options == null) options = new JSONObject();
+            IWordPredictor predictor = buildPredictor(predictorName, options, config);
+            if (predictor == null) continue;
+            predictorList.add(predictor);
+            weightList.add((double) options.optInt("weight", 100));
+            nameList.add(predictorName);
+        }
+        predictors = predictorList.toArray(new IWordPredictor[predictorList.size()]);
+        names = nameList.toArray(new String[nameList.size()]);
+        weights = new double[weightList.size()];
+        for (int i = 0; i < weightList.size(); i++) weights[i] = weightList.get(i);
+    }
 
     public BigramModel2(Config config) {
-//        predictors = new IWordPredictor[3];
-//        IDictionaryStorage dictionaryStorage;
-//        IBigramStorage bigramStorage;
-//        ITrigramStorage trigramStorage;
-        predictors = new IWordPredictor[1];
-        INgramStorage ngramStorage;
-        ngramStorage = new RedisNgramStorage(config);
-        IWordSpaceStorage wordSpaceStorage = new RedisWordSpaceStorage(config);
-        String storageType = config.get("storageType", "sqlite");
-        if (storageType.equals("memory")) {
-//                dictionaryStorage = new MemoryDictionaryStorage();
-//                bigramStorage = new MemoryBigramStorage();
-//                trigramStorage = new MemoryTrigramStorage();
-        }
-        else if (storageType.equals("jdbc")) {
-            String jdbcUrl = config.get("jdbcUrl", "jdbc:mysql://localhost:3306/words");
-//                dictionaryStorage = new JdbcDictionaryStorage(jdbcUrl);
-//                bigramStorage = new JdbcBigramStorage(jdbcUrl);
-//                trigramStorage = new JdbcTrigramStorage(jdbcUrl);
-        }
-        else if (storageType.equals("redis")) {
-//                dictionaryStorage = new RedisDictionaryStorage(config);
-//                bigramStorage = new RedisBigramStorage(config);
-//                trigramStorage = new RedisTrigramStorage(config);
-            ngramStorage = new RedisNgramStorage(config);
-//            wordSpaceStorage = new RedisWordSpaceStorage(config);
-        }
-        else {
-//                dictionaryStorage = new SqliteDictionaryStorage(config.get("dictionarySqliteFile", "jdbc:sqlite:words-dict.sqlite"));
-//                bigramStorage = new SqliteBigramStorage(config.get("bigramSqliteFile", "jdbc:sqlite:words-bi.sqlite"));
-//                trigramStorage = new SqliteTrigramStorage(config.get("trigramSqliteFile", "jdbc:sqlite:words-tri.sqlite"));
-        }
-        String dictionaryFile = config.get("dictionaryFile", "");
-        if (config.get("learnWords", "false").equals("true")) wordSpace = new LearningWordSpace(wordSpaceStorage, dictionaryFile);
-        else wordSpace = new StaticWordSpace(wordSpaceStorage, dictionaryFile);
-//        predictors[0] = new DictionaryPredictor(dictionaryStorage);
-//        predictors[1] = new BigramPredictor(bigramStorage);
-//        predictors[2] = new TrigramPredictor(trigramStorage);
-        predictors[0] = new NgramPredictor(ngramStorage, wordSpace, config);
-        weights = new double[1];
-        weights[0] = config.get("ngramWeight", 300);
-//        weights = new double[3];
-//        weights[0] = config.get("dictionaryWeight", 200);
-//        weights[1] = config.get("bigramWeight", 220);
-//        weights[2] = config.get("trigramWeight", 240);
+        wordSpace = buildWordSpace(config);
+        buildPredictors(config);
     }
 
     private class WeightedWordList extends WordList {

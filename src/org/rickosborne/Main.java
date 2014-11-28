@@ -7,10 +7,12 @@ import org.rickosborne.bigram.util.*;
 import java.io.*;
 import java.text.DecimalFormat;
 
+import static org.rickosborne.bigram.util.Util.linesInFile;
+
 public class Main {
 
     public static void main(String[] args) throws IOException {
-        Config config = new Config("config.properties");
+        Config config = new Config("config.json");
         InputStream in = System.in;
         int maxTrainLines = config.get("maxTrainLines", 10000),
                 maxTestLines = config.get("maxTestLines", 100);
@@ -18,7 +20,8 @@ public class Main {
                 logFile = config.get("logFile", "log.txt");
         if ((args.length > 1) && (args[0].equalsIgnoreCase("learn"))) {
             inputFile = args[1];
-            System.out.println("Input: " + inputFile);
+            maxTrainLines = linesInFile(inputFile);
+            System.out.println("Input: " + inputFile + " (" + String.valueOf(maxTrainLines) + ")");
             System.out.flush();
         }
         if (inputFile != null) {
