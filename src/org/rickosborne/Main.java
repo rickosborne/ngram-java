@@ -98,9 +98,10 @@ public class Main {
 
     private static void learn(BigramModel2 model) {
         String inputFile = getParam("inputFile", null);
+        final State lines = new State("lines.json");
         if ((inputFile == null) || inputFile.isEmpty()) bail("Need an inputFile to learn.");
         int maxTrainLines = linesInFile(inputFile),
-            skipLines = getParam("skipLines", 0);
+            skipLines = getParam("skipLines", lines.get(inputFile, 0));
         LineReader lineReader = new LineReader(inputFile);
         if (skipLines > 0) {
             if (skipLines > maxTrainLines) bail(String.format("Cannot skip %d lines as the file is only %d lines (%s).", skipLines, maxTrainLines, inputFile));
@@ -108,7 +109,12 @@ public class Main {
             lineReader.skipLines(skipLines);
             maxTrainLines -= skipLines;
         }
-        lineReader.setWantLineStatus(true);
+        lineReader.setWantLineStatus(true, new LineReader.ILineState() {
+            @Override
+            public void setLastLine(String fileName, int lastLine) {
+                lines.set(fileName, lastLine);
+            }
+        });
         out("Input:", inputFile, String.valueOf(maxTrainLines), "lines");
         TestResult result = new TestResult();
         Tester tester = new Tester(model, result, null);

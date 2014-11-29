@@ -7,6 +7,8 @@ import org.rickosborne.bigram.util.Prediction;
 
 import java.util.*;
 
+import static org.rickosborne.bigram.util.Util.join;
+
 public class MongoNgramStorage extends MongoStorage implements INgramStorage {
 
     private static final String KEY_TARGETS = ">";
@@ -18,14 +20,20 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
     }
 
     private DBObject docForId(String id) {
-        BasicDBObject template = idTemplate(id);
-        DBObject doc = collection.findOne(id);
-        if (doc == null) {
-            template.append(KEY_TARGETS, new BasicDBObject());
-            collection.insert(template, WriteConcern.ACKNOWLEDGED);
-            doc = collection.findOne(idTemplate(id));
+        try {
+            BasicDBObject template = idTemplate(id);
+            DBObject doc = collection.findOne(id);
+            if (doc == null) {
+                template.append(KEY_TARGETS, new BasicDBObject());
+                collection.insert(template, WriteConcern.ACKNOWLEDGED);
+                doc = collection.findOne(idTemplate(id));
+            }
+            return doc;
+        } catch (ClassCastException e) {
+            System.out.print("!(" + id + ")");
+            System.out.flush();
         }
-        return doc;
+        return null;
     }
 
     private static BasicDBObject newLevel() {
@@ -65,7 +73,7 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
         int wordCount = Math.min(maxWords, words.length - 2);
         String target = words[l - 1];
         String docId = words[l - 2];
-        docForId(docId);
+        if (docForId(docId) == null) return;
         BasicDBObject idDoc = idTemplate(docId);
         // 0.want 1.to 2.go 3.to -> 4.park // doc = to // target = park // l = 5
         // $incr: {
@@ -86,13 +94,20 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
     @Override
     public Prediction get(String[] words, String partial) {
         if (words.length < 1) return null;
-        String lastWord = words[words.length - 1];
+        String lastWord = words[words.length - 1], firstWord = "";
         DBObject doc = collection.findOne(idTemplate(lastWord));
         if (doc == null) return null;
-        int wordIndex = words.length - 2;
+        int wordIndex = words.length - 2, depth = 0;
+        LinkedList<String> matched = new LinkedList<String>();
+        matched.addFirst(lastWord);
         while (wordIndex >= 0) {
             String word = words[wordIndex];
-            if (doc.containsField(word)) doc = (DBObject) doc.get(word);
+            if (doc.containsField(word)) {
+                doc = (DBObject) doc.get(word);
+                depth++;
+                firstWord = word;
+                matched.addFirst(word);
+            }
             else wordIndex = 0;
             wordIndex--;
         }
@@ -109,6 +124,10 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
         }
         int maxSeen = 0, totalSeen = 0, seen;
         Prediction prediction = new Prediction();
+        prediction.addOption(String.format("$depth=%d", depth), 0);
+        prediction.addOption(String.format("$lastWord=%s", lastWord), 0);
+        prediction.addOption(String.format("$firstWord=%s", firstWord), 0);
+        prediction.addOption(String.format("$matched=%s", join(" ", matched.toArray(new String[matched.size()]))), 0);
         String guess = null;
         for (String word : targetWords) {
             seen = (Integer) targets.get(word);

@@ -185,9 +185,10 @@ public class BigramModel2 {
         for (int i = 0, predictorCount = predictors.length; i < predictorCount; i++) {
             Prediction guess = predictors[i].predict(words, partial);
             if ((guess != null) && (guess.getWord() != null)) {
-                int seen = guess.getSeen();
-                int size = guess.getSize();
-                int vote = (int) Math.round(seen * this.weights[i] / size);
+                int seen = guess.getSeen(),
+                    size = guess.getSize();
+                double weight = predictors.length == 1 ? 1.0 : (this.weights[i] / size);
+                int vote = (int) Math.round(seen * weight);
                 String word = guess.getWord();
                 boolean correct = word.equals(answer);
                 log(String.format(
@@ -199,9 +200,9 @@ public class BigramModel2 {
                         vote
                 ));
                 for (Map.Entry<String,Integer> pair : guess.getOptions().entrySet()) {
-                    guesses.learn(pair.getKey(), pair.getValue());
+                    guesses.learn(pair.getKey(), (int) Math.round(pair.getValue() * weight));
                 }
-                guesses.learn(word, vote);
+                // guesses.learn(word, vote);
             }
             else {
                 log("\t\t\t\t\t");

@@ -12,12 +12,17 @@ public class LineReader {
         public boolean handleLine(String line);
     }
 
+    public static interface ILineState {
+        public void setLastLine(String fileName, int lastLine);
+    }
+
     private BufferedReader reader = null;
     private String fileName = null;
     private FileReader file = null;
     private int atLine = 0;
     private Thread interruptHandler = null;
     private boolean wantLineStatus = false;
+    private ILineState lineStateHandler = null;
 
     private void ensureReader() {
         if ((reader == null) && (fileName != null)) {
@@ -54,12 +59,12 @@ public class LineReader {
     public void skipLines(int skipCount) {
         ensureReader();
         if (reader == null) return;
+        String line = null;
         try {
-            while (atLine++ < skipCount) reader.readLine();
+            while (atLine++ < skipCount) line = reader.readLine();
+            if (line != null) System.out.println("Starting after: " + line);
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            cleanUp();
         }
     }
 
@@ -67,7 +72,7 @@ public class LineReader {
         ensureReader();
         if (reader == null) return;
         addInterruptHandler();
-        String line;
+        String line = null;
         boolean keepGoing;
         try {
             do {
@@ -76,6 +81,7 @@ public class LineReader {
                 atLine++;
             } while (keepGoing);
         } catch (IOException e) {
+            if (line != null) System.out.println("\nLast line: " + line);
             e.printStackTrace();
         } finally {
             cleanUp();
@@ -89,7 +95,8 @@ public class LineReader {
                 interruptHandler = new Thread() {
                     @Override
                     public void run() {
-                        System.out.println(String.format("At line %d.", atLine));
+                    System.out.println(String.format("At line %d.", atLine));
+                    if (lineStateHandler != null) lineStateHandler.setLastLine(fileName, atLine);
                     }
                 };
             }
@@ -97,8 +104,9 @@ public class LineReader {
         }
     }
 
-    public void setWantLineStatus(boolean wantLineStatus) {
+    public void setWantLineStatus(boolean wantLineStatus, ILineState lineStateHandler) {
         this.wantLineStatus = wantLineStatus;
+        this.lineStateHandler = lineStateHandler;
     }
 
     public static class TrainTestIterator implements Iterator {
