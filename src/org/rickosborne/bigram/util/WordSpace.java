@@ -23,8 +23,8 @@ public class WordSpace implements IWordSpace {
         storage.findAll(new IWordSpaceStorage.FindAllCallback() {
             @Override
             public boolean foundPair(String word, int index) {
-                if ((index > 0) && !cache.containsKey(word)) cache.put(word, index);
-                return true;
+            if ((index > 0) && !cache.containsKey(word)) cache.put(word, index);
+            return true;
             }
         });
     }
@@ -54,5 +54,10 @@ public class WordSpace implements IWordSpace {
         Integer id = cache.get(word);
         if (id == null) return 0;
         return id;
+    }
+
+    @Override
+    public void removeWord(String word) {
+        cache.put(word, 0);
     }
 }

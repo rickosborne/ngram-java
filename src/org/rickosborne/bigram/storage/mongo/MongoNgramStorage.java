@@ -67,28 +67,20 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
         String docId = words[l - 2];
         docForId(docId);
         BasicDBObject idDoc = idTemplate(docId);
-        // want to go to park // doc = to // target = park
-        // no word // ">.park": { $ifNull: ... } // $inc: { ">.park": 1 } // word = go
-        // "go": { $ifNull: [ "$go", {">":{}} ] }
-        // word 1: go // "go.>.park": { $ifNull: [ "$go.>.park", 0 ] } // $inc: { "go.>.park": 1 }
-        // "go.to": { $ifNull: [ "$go.to", {">":{}} ] }
-        // word 2: to // "go.to.>.park": { $ifNull: ... } // $inc: { "go.to.>park": 1 }
-        // "go.to.want": { $ifNull: ... }
-        String path = "", word = "";
-        int i = 0;
-        BulkWriteOperation builder = collection.initializeOrderedBulkOperation();
-        do {
-            if (i > 0) word = words[l - i - 2];
-            i++;
-            if (!word.isEmpty()) {
-                if (!path.isEmpty()) path += ".";
-                path += word;
-                builder.find(docHasNo(docId, path)).updateOne(set(path, newLevel()));
-            }
-//            builder.find(idDoc).updateOne(zeroIfNull(path, target));
-            builder.find(idDoc).updateOne(incTarget(path, target));
-        } while (i < wordCount);
-        builder.execute();
+        // 0.want 1.to 2.go 3.to -> 4.park // doc = to // target = park // l = 5
+        // $incr: {
+        //   ">.park": 1,
+        //   "go.>.park": 1,
+        //   "go.to.>.park": 1,
+        //   "go.to.want.>.park": 1
+        // }
+        String path = "", pathEnd = TARGET + target;
+        BasicDBObject updateIncs = new BasicDBObject(pathEnd, 1);
+        for (int wordNum = 1; wordNum <= wordCount; wordNum++) {
+            path += words[l - wordNum - 2] + ".";
+            updateIncs.append(path + pathEnd, 1);
+        }
+        collection.update(idDoc, new BasicDBObject(KEY_INC, updateIncs));
     }
 
     @Override
@@ -116,16 +108,19 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
             targetWords = newTargetWords;
         }
         int maxSeen = 0, totalSeen = 0, seen;
+        Prediction prediction = new Prediction();
         String guess = null;
         for (String word : targetWords) {
             seen = (Integer) targets.get(word);
             totalSeen += seen;
+            prediction.addOption(word, seen);
             if (seen > maxSeen) {
                 maxSeen = seen;
                 guess = word;
             }
         }
-        if (guess != null) return new Prediction(guess, maxSeen, totalSeen);
+        prediction.setWord(guess, maxSeen, totalSeen);
+        if (guess != null) return prediction;
         return null;
     }
 }

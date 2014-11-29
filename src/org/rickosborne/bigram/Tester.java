@@ -10,26 +10,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
+import static org.rickosborne.bigram.util.Util.wordsFromLine;
+
 public class Tester {
 
-    private static Pattern[] patterns = {
-        Pattern.compile("\\$"),
-        Pattern.compile("\\b[0-9.,]+\\b"),
-        Pattern.compile("(:-?[)D]|\\(-?:)"),
-        Pattern.compile("(?=\\W|^)(:\\(|\\):)"),
-        Pattern.compile(";-?[)D]"),
-        Pattern.compile("\\s+[@#]\\w+")
-    };
-    private static String[] replacements = {
-        " ",
-        " \\$number ",
-        " \\$smile ",
-        " \\$frown ",
-        " \\$wink ",
-        " "
-    };
-    private static String wordBreaks = "[^\\w'_$]+";
-    private static String[] empty = {};
     private static int maxLetters = 10;
 
     private BigramModel2 model;
@@ -67,24 +51,26 @@ public class Tester {
         }
     }
 
-    public static String[] wordsFromLine (String line) {
-        if ((line == null) || line.isEmpty()) return empty;
-        String result = line.toLowerCase();
-        for (int i = 0, patternCount = patterns.length; i < patternCount; i++) {
-            result = patterns[i].matcher(result).replaceAll(replacements[i]);
-        }
-        String[] parts = result.split(wordBreaks);
-        ArrayList<String> words = new ArrayList<String>();
-        for (String word : parts) {
-            if ((word != null) && !word.isEmpty()) words.add(word);
-        }
-        return words.toArray(new String[words.size()]);
-    }
-
-    public void train (LineReader.TrainTestIterator iterator) {
+    private void prepare() {
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
         result.memoryBefore = runtime.totalMemory() - runtime.freeMemory();
+    }
+
+    public void train (LineReader lineReader) {
+        prepare();
+        lineReader.read(new LineReader.ILineHandler() {
+            @Override
+            public boolean handleLine(String line) {
+                result.linesTrained++;
+                model.learn(wordsFromLine(line));
+                return true;
+            }
+        });
+    }
+
+    public void train (LineReader.TrainTestIterator iterator) {
+        prepare();
         String line = iterator.next();
         while (line != null) {
             result.linesTrained++;

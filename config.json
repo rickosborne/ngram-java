@@ -25,6 +25,7 @@
     "type": "static",
     "storage": "mongo",
     "collection": "wordSpace",
-    "dictionaryFile": "data/dictionary.txt"
+    "dictionaryFile": "data/dictionary.txt",
+    "stopWordsFile": "data/stop-words/stop-words_english_4_google_en.txt"
   }
 }

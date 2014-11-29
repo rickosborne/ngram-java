@@ -10,8 +10,11 @@ import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Map;
 
 import static org.rickosborne.bigram.util.Util.titleCase;
+import static org.rickosborne.bigram.util.Util.wordsFromLine;
 
 public class BigramModel2 {
 
@@ -60,6 +63,26 @@ public class BigramModel2 {
         return null;
     }
 
+    private void clearStopWords (final IWordSpace wordSpace, JSONObject options) {
+        String stopWords = options.optString("stopWords", "");
+        String stopWordsFile = options.optString("stopWordsFile", "");
+        if ((stopWordsFile != null) && !stopWordsFile.isEmpty()) {
+            LineReader reader = new LineReader(stopWordsFile);
+            reader.read(new LineReader.ILineHandler() {
+                @Override
+                public boolean handleLine(String line) {
+                    wordSpace.removeWord(line.toLowerCase());
+                    return true;
+                }
+            });
+        }
+        if ((stopWords != null) && !stopWords.isEmpty()) {
+            for (String word : stopWords.split("\\s+")) {
+                wordSpace.removeWord(word);
+            }
+        }
+    }
+
     private IWordSpace buildWordSpace(Config config) {
         JSONObject options = config.getObject("wordSpace");
         String storageType = options.optString("storage", "memory");
@@ -78,7 +101,9 @@ public class BigramModel2 {
             String spaceType = options.optString("type", "static");
             Class<?> typeClass = Class.forName(PKG_UTIL + titleCase(spaceType) + "WordSpace");
             Constructor typeConstructor = typeClass.getDeclaredConstructor(IWordSpaceStorage.class, String.class);
-            return (IWordSpace) typeConstructor.newInstance(storage, dictionaryFile);
+            IWordSpace space = (IWordSpace) typeConstructor.newInstance(storage, dictionaryFile);
+            clearStopWords(space, options);
+            return space;
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } catch (NoSuchMethodException e) {
@@ -143,6 +168,18 @@ public class BigramModel2 {
         }
     }
 
+    public String[] splitWords(String words) {
+        LinkedList<String> knownWords = new LinkedList<String>();
+        for (String word : wordsFromLine(words)) {
+            if (wordSpace.idForWord(word) > 0) knownWords.add(word);
+        }
+        return knownWords.toArray(new String[knownWords.size()]);
+    }
+
+    public WordList guess(String words, String partial, String answer) {
+        return guess(splitWords(words), partial, answer);
+    }
+
     public WordList guess(String[] words, String partial, String answer) {
         WordList guesses = new WeightedWordList();
         for (int i = 0, predictorCount = predictors.length; i < predictorCount; i++) {
@@ -161,6 +198,9 @@ public class BigramModel2 {
                         size,
                         vote
                 ));
+                for (Map.Entry<String,Integer> pair : guess.getOptions().entrySet()) {
+                    guesses.learn(pair.getKey(), pair.getValue());
+                }
                 guesses.learn(word, vote);
             }
             else {
