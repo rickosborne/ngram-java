@@ -34,17 +34,17 @@ public class Tester {
         return sb.toString();
     }
 
-    public Tester(BigramModel2 model, TestResult result, OutputStream log) throws IOException {
+    public Tester(BigramModel2 model, TestResult result, OutputStream log) {
         this.model = model;
         this.result = result;
-        this.logger = new OutputStreamWriter(log);
+        this.logger = log == null ? null : new OutputStreamWriter(log);
         log("Trial\tWords\tPartial\tAnswer\t");
         model.setLogger(this.logger);
         log("Winner\tCorrect?\tLetters\tGave Up\n");
     }
 
     private void log(String message) {
-        try {
+        if (this.logger != null) try {
             this.logger.write(message);
         } catch (IOException e) {
             e.printStackTrace();
