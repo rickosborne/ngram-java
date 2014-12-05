@@ -1,5 +1,6 @@
 package org.rickosborne.bigram.util;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
@@ -37,10 +38,14 @@ public class Prediction {
 
     public JSONObject asJSONObject() {
         JSONObject json = new JSONObject();
-        json.put("word", word);
-        json.put("seen", seen);
-        json.put("size", size);
-        json.put("options", options);
+        try {
+            json.put("word", word);
+            json.put("seen", seen);
+            json.put("size", size);
+            json.put("options", options);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         return json;
     }
 

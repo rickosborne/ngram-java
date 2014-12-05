@@ -1,6 +1,7 @@
 package org.rickosborne.bigram.util;
 
 import org.apache.commons.io.FileUtils;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -13,10 +14,16 @@ public class State {
 
     public State(String fileName) {
         this.file = new File(fileName);
+        reload();
+    }
+
+    private void reload() {
         try {
             state = new JSONObject(FileUtils.readFileToString(file));
         } catch (IOException e) {
             state = new JSONObject();
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
     }
 
@@ -25,8 +32,13 @@ public class State {
     }
 
     public void set(String key, int value) {
-        state.put(key, value);
-        save();
+        try {
+            reload();
+            state.put(key, value);
+            save();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     private void save() {
