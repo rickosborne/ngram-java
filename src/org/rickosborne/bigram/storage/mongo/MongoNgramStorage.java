@@ -22,7 +22,7 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
     private DBObject docForId(String id) {
         try {
             BasicDBObject template = idTemplate(id);
-            DBObject doc = collection.findOne(id);
+            DBObject doc = collection.findOne(template);
             if (doc == null) {
                 template.append(KEY_TARGETS, new BasicDBObject());
                 collection.insert(template, WriteConcern.ACKNOWLEDGED);
@@ -30,8 +30,8 @@ public class MongoNgramStorage extends MongoStorage implements INgramStorage {
             }
             return doc;
         } catch (ClassCastException e) {
-            System.out.print("!(" + id + ")");
-            System.out.flush();
+//            System.out.print("!(" + id + ")");
+//            System.out.flush();
         }
         return null;
     }
